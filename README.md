@@ -33,8 +33,8 @@ The codebase is heavily inspired by the [GitHub Copilot Metrics Viewer](https://
    git clone https://github.com/ucemucar/copilot-metrics-visualiser.git
    cd copilot-metrics-visualiser
 2. **Configure Environment**:
-    - Update `application.properties` with your GitHub {TOKEN} and {ORG_NAME}:
       ```plaintext
+      Update `application.properties` with your GitHub {TOKEN} and {ORG_NAME}:
       github.api.token=your_personal_access_token
       github.api.metrics.url=/orgs/{ORG_NAME}/copilot/metrics
       github.api.seats.url=/orgs/{ORG_NAME}/copilot/billing/seats
