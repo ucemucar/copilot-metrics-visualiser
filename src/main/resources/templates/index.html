@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Copilot Metrics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link rel="stylesheet" href="/css/style.css">
+
+</head>
+<body>
+<div class="container">
+    <h1>GitHub Copilot Metrics Dashboard</h1>
+
+    <div class="tab-menu">
+        <div class="tab active" data-tab="overview">Overview</div>
+        <div class="tab" data-tab="dataTable">Data Table</div>
+        <div class="tab" data-tab="userActivity">User Activity</div>
+    </div>
+
+    <!-- Overview -->
+    <div id="overview" class="tab-content active">
+        <div class="metrics-cards">
+            <div class="card">
+                <h3>Acceptance Rate (by count)</h3>
+                <p>Over the last 28 days</p>
+                <div class="value" id="acceptanceRateByCount">0%</div>
+            </div>
+            <div class="card">
+                <h3>Total Counts of Suggestions</h3>
+                <p>Over the last 28 days</p>
+                <div class="value" id="totalSuggestions">0</div>
+            </div>
+            <div class="card">
+                <h3>Acceptance Rate (by lines)</h3>
+                <p>Over the last 28 days</p>
+                <div class="value" id="acceptanceRateByLines">0%</div>
+            </div>
+            <div class="card">
+                <h3>Total Lines of Code Suggested</h3>
+                <p>Over the last 28 days</p>
+                <div class="value" id="totalLinesSuggested">0</div>
+            </div>
+            <div class="card">
+                <h3>Number of Languages</h3>
+                <p>Over the last 28 days</p>
+                <div class="value" id="numberOfLanguages">0</div>
+            </div>
+        </div>
+        <div class="charts-row">
+            <div class="chart-container">
+                <div id="languagePieChart"></div>
+            </div>
+            <div class="chart-container">
+                <div id="acceptanceRateByCountChart"></div>
+            </div>
+            <div class="chart-container">
+                <div id="acceptanceRateByLinesChart"></div>
+            </div>
+        </div>
+        <div class="line-chart-container">
+            <div id="suggestionsLineChart"></div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div id="dataTable" class="tab-content">
+        <div class="filters">
+            <div>
+                <label for="dateFilter">Filter by Date:</label>
+                <input type="date" id="dateFilter" onchange="filterTable()">
+            </div>
+            <div>
+                <label for="languageFilter">Filter by Language:</label>
+                <select id="languageFilter" onchange="filterTable()">
+                    <option value="">All Languages</option>
+                </select>
+            </div>
+        </div>
+        <table id="metricsTable">
+            <thead>
+            <tr>
+                <th onclick="sortTable(0)">Date</th>
+                <th onclick="sortTable(1)">Language</th>
+                <th onclick="sortTable(2)">Total Active Users</th>
+                <th onclick="sortTable(3)">Total Suggestions</th>
+                <th onclick="sortTable(4)">Total Acceptances</th>
+                <th onclick="sortTable(5)">Suggested Lines</th>
+                <th onclick="sortTable(6)">Accepted Lines</th>
+            </tr>
+            </thead>
+            <tbody id="tableBody">
+            <th:block th:each="daily : ${combinedResponse?.dailyMetrics}">
+                <th:block th:if="${daily.codeCompletionsMetrics != null}"
+                          th:each="editor : ${daily.codeCompletionsMetrics.editors}">
+                    <th:block th:each="model : ${editor?.models}">
+                        <tr th:each="lang : ${model?.languages}">
+                            <td th:text="${daily.date}"></td>
+                            <td th:text="${lang.name}"></td>
+                            <td th:text="${lang.totalEngagedUsers}"></td>
+                            <td th:text="${lang.totalCodeSuggestions}"></td>
+                            <td th:text="${lang.totalCodeAcceptances}"></td>
+                            <td th:text="${lang.totalCodeLinesSuggested}"></td>
+                            <td th:text="${lang.totalCodeLinesAccepted}"></td>
+                        </tr>
+                    </th:block>
+                </th:block>
+            </th:block>
+            <tr th:if="${#lists.isEmpty(combinedResponse?.dailyMetrics)}">
+                <td colspan="7">No data available</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- User Activity -->
+    <div id="userActivity" class="tab-content">
+        <div class="metrics-cards">
+            <div class="card">
+                <h3>Total Assigned Seats</h3>
+                <p>Currently assigned seats</p>
+                <div class="value" th:text="${combinedResponse?.seatsResponse?.seats != null ? #lists.size(combinedResponse.seatsResponse.seats) : 0}">0</div>
+            </div>
+            <div class="card">
+                <h3>Assigned But Never Used</h3>
+                <p>No-show seats</p>
+                <div class="value" id="assignedButNeverUsed">0</div>
+            </div>
+            <div class="card">
+                <h3>No Activity in Last 7 Days</h3>
+                <p>No use in the last 7 days</p>
+                <div class="value" id="noActivityLast7Days">0</div>
+            </div>
+        </div>
+        <table id="userActivityTable">
+            <thead>
+            <tr>
+                <th onclick="sortUserActivityTable(0)">Login</th>
+                <th onclick="sortUserActivityTable(1)">Assigned At</th>
+                <th onclick="sortUserActivityTable(2)">Last Activity At</th>
+                <th onclick="sortUserActivityTable(3)">Last Activity Editor</th>
+            </tr>
+            </thead>
+            <tbody id="userActivityTableBody">
+            <tr th:each="seat : ${combinedResponse?.seatsResponse?.seats}">
+                <td th:text="${seat.assignee.login ?: 'N/A'}">N/A</td>
+                <td th:text="${seat.createdAt ?: 'N/A'}">N/A</td>
+                <td th:text="${seat.lastActivityAt ?: 'N/A'}">N/A</td>
+                <td th:text="${seat.lastActivityEditor ?: 'N/A'}">N/A</td>
+            </tr>
+            <tr th:if="${combinedResponse?.seatsResponse?.seats == null or #lists.isEmpty(combinedResponse.seatsResponse.seats)}">
+                <td colspan="4">No seats available</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const combinedResponse = /*[[${combinedResponse}]]*/ {};
+    const dailyMetrics = combinedResponse.dailyMetrics || [];
+    const seats = combinedResponse.seatsResponse ? combinedResponse.seatsResponse.seats : [];
+
+    console.log("combinedResponse:", combinedResponse);
+    console.log("dailyMetrics:", dailyMetrics);
+    console.log("seats:", seats);
+
+    const today = new Date();
+    const last28Days = new Date(today);
+    last28Days.setDate(today.getDate() - 28);
+    const filteredMetrics = dailyMetrics.filter(day => new Date(day.date) >= last28Days);
+
+    const langAcceptancesMap = {};
+    const dates = [];
+    const suggestionCounts = [];
+    const acceptanceCounts = [];
+    const dateMetrics = {};
+    let totalSuggestions = 0;
+    let totalAcceptances = 0;
+    let totalLinesSuggested = 0;
+    let totalLinesAccepted = 0;
+    const languagesSet = new Set();
+    const langMetrics = {};
+
+    filteredMetrics.forEach(day => {
+        if (!day.copilot_ide_code_completions) return;
+        const editors = day.copilot_ide_code_completions.editors || [];
+        editors.forEach(editor => {
+            const models = editor?.models || [];
+            models.forEach(model => {
+                const langs = model?.languages || [];
+                langs.forEach(lang => {
+                    const acceptances = Number(lang.total_code_acceptances) || 0;
+                    if (acceptances > 0) {
+                        langAcceptancesMap[lang.name] = (langAcceptancesMap[lang.name] || 0) + acceptances;
+                    }
+                    if (!dateMetrics[day.date]) {
+                        dateMetrics[day.date] = { totalSuggestions: 0, totalAcceptances: 0 };
+                    }
+                    dateMetrics[day.date].totalSuggestions += (Number(lang.total_code_suggestions) || 0);
+                    dateMetrics[day.date].totalAcceptances += (Number(lang.total_code_acceptances) || 0);
+                    totalSuggestions += (Number(lang.total_code_suggestions) || 0);
+                    totalAcceptances += (Number(lang.total_code_acceptances) || 0);
+                    totalLinesSuggested += (Number(lang.total_code_lines_suggested) || 0);
+                    totalLinesAccepted += (Number(lang.total_code_lines_accepted) || 0);
+                    languagesSet.add(lang.name);
+                    if (!langMetrics[lang.name]) {
+                        langMetrics[lang.name] = {
+                            totalSuggestions: 0,
+                            totalAcceptances: 0,
+                            totalLinesSuggested: 0,
+                            totalLinesAccepted: 0
+                        };
+                    }
+                    langMetrics[lang.name].totalSuggestions += (Number(lang.total_code_suggestions) || 0);
+                    langMetrics[lang.name].totalAcceptances += (Number(lang.total_code_acceptances) || 0);
+                    langMetrics[lang.name].totalLinesSuggested += (Number(lang.total_code_lines_suggested) || 0);
+                    langMetrics[lang.name].totalLinesAccepted += (Number(lang.total_code_lines_accepted) || 0);
+                });
+            });
+        });
+    });
+
+    const acceptanceRateByCount = totalSuggestions > 0 ? ((totalAcceptances / totalSuggestions) * 100).toFixed(2) : 0;
+    const acceptanceRateByLines = totalLinesSuggested > 0 ? ((totalLinesAccepted / totalLinesSuggested) * 100).toFixed(2) : 0;
+
+    document.getElementById("acceptanceRateByCount").innerText = acceptanceRateByCount + "%";
+    document.getElementById("totalSuggestions").innerText = totalSuggestions;
+    document.getElementById("acceptanceRateByLines").innerText = acceptanceRateByLines + "%";
+    document.getElementById("totalLinesSuggested").innerText = totalLinesSuggested;
+    document.getElementById("numberOfLanguages").innerText = languagesSet.size;
+
+    const languageFilter = document.getElementById("languageFilter");
+    languagesSet.forEach(lang => {
+        const option = document.createElement("option");
+        option.value = lang;
+        option.text = lang;
+        languageFilter.appendChild(option);
+    });
+
+    const langEntries = Object.entries(langAcceptancesMap);
+    langEntries.sort((a, b) => b[1] - a[1]);
+    const top5Langs = langEntries.slice(0, 5);
+    const languages = top5Langs.map(entry => entry[0]);
+    const langAcceptances = top5Langs.map(entry => entry[1]);
+
+    Object.keys(dateMetrics).forEach(date => {
+        dates.push(date);
+        suggestionCounts.push(dateMetrics[date].totalSuggestions);
+        acceptanceCounts.push(dateMetrics[date].totalAcceptances);
+    });
+
+    const pieOptions = {
+        chart: { type: "pie", height: 350 },
+        series: langAcceptances.length > 0 ? langAcceptances : [0],
+        labels: languages.length > 0 ? languages : ["No Data"],
+        colors: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40", "#FFCD56", "#4BC0C0", "#36A2EB", "#FF6384"],
+        title: { text: "Accepted Suggestions by Language (Top 5)", align: "center" },
+        noData: { text: "No data available", align: "center", verticalAlign: "middle" }
+    };
+    const languagePieChart = new ApexCharts(document.querySelector("#languagePieChart"), pieOptions);
+    languagePieChart.render();
+
+    const top5LangsByMetrics = Object.entries(langMetrics)
+        .sort((a, b) => b[1].totalAcceptances - a[1].totalAcceptances)
+        .slice(0, 5);
+    const top5LangNames = top5LangsByMetrics.map(entry => entry[0]);
+    const top5LangAcceptanceRatesByCount = top5LangsByMetrics.map(entry => {
+        const langData = entry[1];
+        return langData.totalSuggestions > 0 ? (langData.totalAcceptances / langData.totalSuggestions) * 100 : 0;
+    });
+    const top5LangAcceptanceRatesByLines = top5LangsByMetrics.map(entry => {
+        const langData = entry[1];
+        return langData.totalLinesSuggested > 0 ? (langData.totalLinesAccepted / langData.totalLinesSuggested) * 100 : 0;
+    });
+
+    const acceptanceRateByCountChartOptions = {
+        chart: { type: "pie", height: 350 },
+        series: top5LangAcceptanceRatesByCount.length > 0 ? top5LangAcceptanceRatesByCount : [0],
+        labels: top5LangNames.length > 0 ? top5LangNames : ["No Data"],
+        colors: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40", "#FFCD56", "#4BC0C0", "#36A2EB", "#FF6384"],
+        title: { text: "Acceptance Rate (by count) for Top 5 Languages", align: "center" },
+        noData: { text: "No data available", align: "center", verticalAlign: "middle" },
+        tooltip: { y: { formatter: val => val.toFixed(2) + "%" } }
+    };
+    const acceptanceRateByCountChart = new ApexCharts(document.querySelector("#acceptanceRateByCountChart"), acceptanceRateByCountChartOptions);
+    acceptanceRateByCountChart.render();
+
+    const acceptanceRateByLinesChartOptions = {
+        chart: { type: "pie", height: 350 },
+        series: top5LangAcceptanceRatesByLines.length > 0 ? top5LangAcceptanceRatesByLines : [0],
+        labels: top5LangNames.length > 0 ? top5LangNames : ["No Data"],
+        colors: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40", "#FFCD56", "#4BC0C0", "#36A2EB", "#FF6384"],
+        title: { text: "Acceptance Rate (by lines) for Top 5 Languages", align: "center" },
+        noData: { text: "No data available", align: "center", verticalAlign: "middle" },
+        tooltip: { y: { formatter: val => val.toFixed(2) + "%" } }
+    };
+    const acceptanceRateByLinesChart = new ApexCharts(document.querySelector("#acceptanceRateByLinesChart"), acceptanceRateByLinesChartOptions);
+    acceptanceRateByLinesChart.render();
+
+    const lineOptions = {
+        chart: { type: "line", height: 350 },
+        series: [
+            { name: "Total Suggestions", data: suggestionCounts.length > 0 ? suggestionCounts : [0] },
+            { name: "Total Acceptances", data: acceptanceCounts.length > 0 ? acceptanceCounts : [0] }
+        ],
+        xaxis: {
+            categories: dates.length > 0 ? dates : ["No Data"],
+            title: { text: "Date" }
+        },
+        yaxis: { min: 0, title: { text: "Count" } },
+        colors: ["#36A2EB", "#FF6384"],
+        title: { text: "Suggestions and Acceptances Over Time", align: "center" },
+        noData: { text: "No data available", align: "center", verticalAlign: "middle" },
+        stroke: { curve: "smooth", width: 3 },
+        markers: { size: 5 },
+        tooltip: { x: { format: "yyyy-MM-dd" } }
+    };
+    const suggestionsLineChart = new ApexCharts(document.querySelector("#suggestionsLineChart"), lineOptions);
+    suggestionsLineChart.render();
+
+    const assignedButNeverUsed = seats.filter(seat => seat.last_activity_at === null).length;
+    const noActivityLast7Days = seats.filter(seat => {
+        if (seat.last_activity_at) {
+            const lastActivityDate = new Date(seat.last_activity_at);
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            return lastActivityDate < sevenDaysAgo;
+        }
+        return false;
+    }).length;
+
+    document.getElementById("assignedButNeverUsed").innerText = assignedButNeverUsed;
+    document.getElementById("noActivityLast7Days").innerText = noActivityLast7Days;
+
+    function openTab(tabName) {
+        const tabs = document.getElementsByClassName("tab");
+        const contents = document.getElementsByClassName("tab-content");
+
+        for (let i = 0; i < tabs.length; i++) {
+            tabs[i].classList.remove("active");
+            if (contents[i]) contents[i].classList.remove("active");
+        }
+
+        const contentElement = document.getElementById(tabName);
+        const tabElement = document.querySelector(`.tab[data-tab="${tabName}"]`);
+
+        if (contentElement) contentElement.classList.add("active");
+        else console.warn(`Content element with ID "${tabName}" not found.`);
+
+        if (tabElement) tabElement.classList.add("active");
+        else console.warn(`Tab element with data-tab="${tabName}" not found.`);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const tabs = document.getElementsByClassName("tab");
+        for (let tab of tabs) {
+            tab.addEventListener("click", () => {
+                const tabName = tab.getAttribute("data-tab");
+                openTab(tabName);
+            });
+        }
+    });
+
+    let sortDirectionMetrics = Array(7).fill(1);
+
+    function sortTable(columnIndex) {
+        const table = document.getElementById("metricsTable");
+        const tbody = table.getElementsByTagName("tbody")[0];
+        const rows = Array.from(tbody.getElementsByTagName("tr"));
+        const dataRows = rows.filter(row => row.cells.length > 1);
+
+        if (dataRows.length === 0) return;
+
+        sortDirectionMetrics[columnIndex] = sortDirectionMetrics[columnIndex] === 1 ? -1 : 1;
+
+        dataRows.sort((rowA, rowB) => {
+            let valueA = rowA.cells[columnIndex].innerText;
+            let valueB = rowB.cells[columnIndex].innerText;
+
+            if (columnIndex >= 2) {
+                valueA = parseFloat(valueA) || 0;
+                valueB = parseFloat(valueB) || 0;
+            } else {
+                valueA = valueA.toLowerCase();
+                valueB = valueB.toLowerCase();
+            }
+
+            if (valueA < valueB) return -1 * sortDirectionMetrics[columnIndex];
+            if (valueA > valueB) return 1 * sortDirectionMetrics[columnIndex];
+            return 0;
+        });
+
+        while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+        dataRows.forEach(row => tbody.appendChild(row));
+        if (rows.length !== dataRows.length) {
+            const noDataRow = rows.find(row => row.cells.length === 1);
+            if (noDataRow) tbody.appendChild(noDataRow);
+        }
+    }
+
+    let sortDirectionUserActivity = Array(4).fill(1);
+
+    function sortUserActivityTable(columnIndex) {
+        const table = document.getElementById("userActivityTable");
+        const tbody = table.getElementsByTagName("tbody")[0];
+        const rows = Array.from(tbody.getElementsByTagName("tr"));
+        const dataRows = rows.filter(row => row.cells.length > 1);
+
+        if (dataRows.length === 0) return;
+
+        sortDirectionUserActivity[columnIndex] = sortDirectionUserActivity[columnIndex] === 1 ? -1 : 1;
+
+        dataRows.sort((rowA, rowB) => {
+            let valueA = rowA.cells[columnIndex].innerText;
+            let valueB = rowB.cells[columnIndex].innerText;
+
+            if (columnIndex === 1 || columnIndex === 2) {
+                if (valueA === 'N/A' && valueB === 'N/A') return 0;
+                if (valueA === 'N/A') return 1 * sortDirectionUserActivity[columnIndex];
+                if (valueB === 'N/A') return -1 * sortDirectionUserActivity[columnIndex];
+                valueA = new Date(valueA).getTime();
+                valueB = new Date(valueB).getTime();
+            } else {
+                valueA = valueA.toLowerCase();
+                valueB = valueB.toLowerCase();
+            }
+
+            if (valueA < valueB) return -1 * sortDirectionUserActivity[columnIndex];
+            if (valueA > valueB) return 1 * sortDirectionUserActivity[columnIndex];
+            return 0;
+        });
+
+        while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+        dataRows.forEach(row => tbody.appendChild(row));
+        if (rows.length !== dataRows.length) {
+            const noDataRow = rows.find(row => row.cells.length === 1);
+            if (noDataRow) tbody.appendChild(noDataRow);
+        }
+    }
+
+    function filterTable() {
+        const dateFilter = document.getElementById("dateFilter").value;
+        const languageFilter = document.getElementById("languageFilter").value;
+        const tbody = document.getElementById("tableBody");
+        const rows = Array.from(tbody.getElementsByTagName("tr"));
+        const dataRows = rows.filter(row => row.cells.length > 1);
+        const noDataRow = rows.find(row => row.cells.length === 1);
+
+        let filteredRows = dataRows;
+        if (dateFilter) filteredRows = filteredRows.filter(row => row.cells[0].innerText === dateFilter);
+        if (languageFilter) filteredRows = filteredRows.filter(row => row.cells[1].innerText === languageFilter);
+
+        while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+        if (filteredRows.length > 0) {
+            filteredRows.forEach(row => tbody.appendChild(row));
+        } else {
+            const noDataRowClone = noDataRow ? noDataRow.cloneNode(true) : document.createElement("tr");
+            if (!noDataRow) {
+                const td = document.createElement("td");
+                td.colSpan = 7;
+                td.innerText = "No data available";
+                noDataRowClone.appendChild(td);
+            }
+            tbody.appendChild(noDataRowClone);
+        }
+    }
+</script>
+</body>
+</html>

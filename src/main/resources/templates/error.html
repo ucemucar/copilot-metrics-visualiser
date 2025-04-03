@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - GitHub Copilot Metrics Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="error-container">
+    <h1>Oops! Something Went Wrong</h1>
+    <p th:if="${status != null}">
+        <span class="error-code" th:text="${status} + ' ' + ${error}"></span>
+        <br>
+        <span th:text="${message}"></span>
+    </p>
+    <p th:unless="${status != null}">
+        An unexpected error occurred. Please try again later.
+    </p>
+    <p>
+        <a href="/" th:href="@{/}">Return to Dashboard</a>
+    </p>
+</div>
+</body>
+</html>
