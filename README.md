@@ -55,6 +55,8 @@ The codebase is heavily inspired by the [GitHub Copilot Metrics Viewer](https://
   - User Activity: Review seat assignments and activity status.
   - Interact with Charts: Hover over charts for detailed tooltips and use table headers to sort data.
 
+![image](https://github.com/user-attachments/assets/d9c686d7-e338-45bd-a243-503c4e013938)
+
 ## Acknowledgments
 - Inspired by the GitHub Copilot Metrics Viewer project.
 - Built with assistance from Grok, an AI developed by xAI.
