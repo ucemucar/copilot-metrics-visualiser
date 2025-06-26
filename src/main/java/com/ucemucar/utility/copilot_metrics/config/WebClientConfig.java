@@ -17,7 +17,16 @@ public class WebClientConfig {
     @Bean
     public WebClient webClient() {
 
-        return WebClient.builder().baseUrl(githubApiBaseUrl).defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + githubApiToken).defaultHeader(HttpHeaders.ACCEPT, "application/vnd.github+json").build();
+        return WebClient.builder()
+                .baseUrl(githubApiBaseUrl)
+                .exchangeStrategies(ExchangeStrategies
+                        .builder()
+                        .codecs(codecs -> codecs
+                                .defaultCodecs()
+                                .maxInMemorySize(500 * 1024))
+                        .build())
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + githubApiToken)
+                .defaultHeader(HttpHeaders.ACCEPT, "application/vnd.github+json").build();
     }
 
 }
